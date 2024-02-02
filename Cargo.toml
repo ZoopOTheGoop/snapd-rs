@@ -2,3 +2,21 @@
 name = "snapd"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
+http-body-util = "0.1.0"
+hyper = { version = "1.1.0", default-features = false, features = [
+    "client",
+    "http1",
+] }
+pin-project = "1.1.4"
+tokio = { version = "1.35.1", default-features = false, features = [
+    "net",
+    "rt",              # note: remove, just for testing with `main`
+    "macros",          #ditto
+    "rt-multi-thread", # ditto
+    "io-util",
+] }
+
+[dev-dependencies]
+tokio = { version = "1.35.1", default-features = false, features = ["full"] }
