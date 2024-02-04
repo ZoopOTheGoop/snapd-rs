@@ -154,43 +154,55 @@ snap_str_newtype! {
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Default)]
 pub struct SnapCommand<'a, 'b> {
     pub name: SnapName<'a>,
-    pub command: App<'b>,
+    pub command: Option<App<'b>>,
 }
 
 impl<'a, 'b> SnapCommand<'a, 'b> {
+    pub fn name_only(name: SnapName<'a>) -> Self {
+        Self {
+            name,
+            ..Default::default()
+        }
+    }
+
     pub fn from_parts(name: SnapName<'a>, command: App<'b>) -> Self {
-        Self { name, command }
+        Self {
+            name,
+            command: Some(command),
+        }
     }
 
     pub fn from_convertible<N: Into<SnapName<'a>>, C: Into<App<'b>>>(name: N, command: C) -> Self {
         Self::from_parts(name.into(), command.into())
     }
 
-    pub fn from_raw<'c: 'a + 'b>(raw_command: &'c str) -> Result<Self, SnapdDeserializeError> {
-        let (name, command) = raw_command
+    pub fn from_raw<'c: 'a + 'b>(raw_command: &'c str) -> Self {
+        raw_command
             .split_once('.')
-            .ok_or_else(|| SnapdDeserializeError::MalformedCommand(raw_command.into()))?;
-
-        Ok(Self::from_convertible(name, command))
+            .map(|(name, command)| Self {
+                name: name.into(),
+                command: Some(command.into()),
+            })
+            .unwrap_or(Self {
+                name: raw_command.into(),
+                command: None,
+            })
     }
 
-    pub fn from_raw_owned(raw_command: String) -> Result<Self, SnapdDeserializeError<'a>> {
+    pub fn from_raw_owned(raw_command: String) -> Self {
         // Note: it is *very* important this be `SnapCommand::from_raw` instead of `Self::from_raw`;
         // it took me forever to debug this, but `Self` implies the same lifetimes, which leads to an
         // infinite loop where `Self::from_raw` followed by converting the values into strings forces
         // the compiler to assume that the borrow of `raw_command` from `from_raw`
         // somehow outlives the `'static` lifetime of `String`.
-        if let Ok(borrowed) = SnapCommand::from_raw(&raw_command) {
-            // There's really no good way to do this without two clones, at least not with severely
-            // overcomplicating this struct. We could *technically* have an underlying `raw` that's `Pin`ned
-            // and `Box`ed, as well as an `Option`` in case we use `from_parts` to construct this. And then like
-            // put `raw_command` on the heap in a pinned location and thus avoid two allocations.
-            //
-            // But like... why bother?
-            return Ok(borrowed.to_owned_inner());
-        }
-
-        Err(SnapdDeserializeError::MalformedCommand(raw_command.into()))
+        //
+        // Also, there's really no good way to do this without two clones, at least not with severely
+        // overcomplicating this struct. We could *technically* have an underlying `raw` that's `Pin`ned
+        // and `Box`ed, as well as an `Option`` in case we use `from_parts` to construct this. And then like
+        // put `raw_command` on the heap in a pinned location and thus avoid two allocations.
+        //
+        // But like... why bother?
+        SnapCommand::from_raw(&raw_command).to_owned_inner()
     }
 }
 
@@ -200,14 +212,18 @@ impl<'a, 'b> ToOwnedInner for SnapCommand<'a, 'b> {
     fn to_owned_inner<'c>(self) -> Self::Other<'c> {
         SnapCommand {
             name: self.name.to_owned_inner(),
-            command: self.command.to_owned_inner(),
+            command: self.command.map(|v| v.to_owned_inner()),
         }
     }
 }
 
 impl<'a, 'b> Display for SnapCommand<'a, 'b> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}.{}", self.name.as_ref(), self.command.as_ref())
+        if let Some(ref command) = self.command {
+            write!(f, "{}.{}", self.name.as_ref(), command.as_ref())
+        } else {
+            write!(f, "{}", self.name.as_ref())
+        }
     }
 }
 
@@ -236,7 +252,7 @@ impl<'de> Visitor<'de> for SnapCommandVisitor {
     }
 
     fn visit_borrowed_str<E: de::Error>(self, v: &'de str) -> Result<Self::Value, E> {
-        SnapCommand::from_raw(v).map_err(|err| E::custom(err))
+        Ok(SnapCommand::from_raw(v))
     }
 }
 
