@@ -31,12 +31,9 @@
 //! assert_eq!("foo", name.as_ref());
 //! ```
 
-use core::fmt;
-use std::{borrow::Cow, fmt::Display};
+use std::fmt::Display;
 
-use serde::de;
-use serde::{de::Visitor, Deserialize, Serialize};
-use thiserror::Error;
+use serde::{Deserialize, Serialize};
 
 use super::snap_str_newtype;
 
@@ -69,9 +66,12 @@ snap_str_newtype! {
 
 /// A Snap Command. Every Snap has one or mode "apps" that are namespaced under the Snap itself. For instance,
 /// the `lxd` Snap also contains `lxc` as a subprogram. These are then namespaced as `lxd.lxc`.  
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Eq, Default)]
+#[serde(from = "&str")]
 pub struct SnapCommand<'a, 'b> {
+    #[serde(borrow)]
     pub name: SnapName<'a>,
+    #[serde(borrow)]
     pub command: Option<App<'b>>,
 }
 
@@ -124,6 +124,12 @@ impl<'a, 'b> SnapCommand<'a, 'b> {
     }
 }
 
+impl<'a> From<&'a str> for SnapCommand<'a, 'a> {
+    fn from(val: &'a str) -> Self {
+        Self::from_raw(val)
+    }
+}
+
 impl<'a, 'b> ToOwnedInner for SnapCommand<'a, 'b> {
     type Other<'c> = SnapCommand<'c, 'c>;
 
@@ -151,35 +157,6 @@ impl<'a, 'b> Serialize for SnapCommand<'a, 'b> {
         S: serde::Serializer,
     {
         serializer.collect_str(self)
-    }
-}
-
-#[derive(Debug, Clone, Hash, Eq, PartialEq, Error)]
-pub enum SnapdDeserializeError<'a> {
-    #[error("command string is malformed. expected [name].[command] got {0}.")]
-    MalformedCommand(Cow<'a, str>),
-}
-
-struct SnapCommandVisitor;
-
-impl<'de> Visitor<'de> for SnapCommandVisitor {
-    type Value = SnapCommand<'de, 'de>;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a string of the form {name}.{command}")
-    }
-
-    fn visit_borrowed_str<E: de::Error>(self, v: &'de str) -> Result<Self::Value, E> {
-        Ok(SnapCommand::from_raw(v))
-    }
-}
-
-impl<'de> Deserialize<'de> for SnapCommand<'de, 'de> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_str(SnapCommandVisitor)
     }
 }
 
