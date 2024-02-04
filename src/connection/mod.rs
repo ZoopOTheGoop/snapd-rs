@@ -16,8 +16,6 @@ use io::UnixSocketIo;
 #[doc(inline)]
 pub use error::{ConnectionReuseError, SnapdConnectionError};
 
-const SNAPD_SOCKET_PATH: &str = "/run/snapd.socket";
-
 pub(crate) enum SnapdConnection {
     Active {
         request_sender: SendRequest<SnapdRequestBody>,
@@ -27,10 +25,13 @@ pub(crate) enum SnapdConnection {
 }
 
 impl SnapdConnection {
+    pub const SNAPD_SOCKET_PATH: &'static str = "/run/snapd.socket";
+
     /// Creates a new live connection to the `snapd` socket. This does not
     /// specify a URI or API endpoint yet.
     async fn new() -> Result<Self, SnapdConnectionError> {
-        let stream = UnixSocketIo::from(UnixStream::connect(SNAPD_SOCKET_PATH).await.unwrap());
+        let stream =
+            UnixSocketIo::from(UnixStream::connect(Self::SNAPD_SOCKET_PATH).await.unwrap());
 
         let (request_sender, connection) = conn::handshake::<_, SnapdRequestBody>(stream).await?;
 
@@ -43,7 +44,7 @@ impl SnapdConnection {
     }
 
     /// Checks if the sender got closed (probably by the remote host).
-    fn is_closed(&self) -> bool {
+    pub fn is_closed(&self) -> bool {
         match self {
             Self::Active { request_sender, .. } => request_sender.is_closed(),
             _ => false,
@@ -52,7 +53,7 @@ impl SnapdConnection {
 
     /// Checks if the coroutine is finished, which should only happen on error
     /// given there's no way to drop `sender`.
-    fn is_finished(&self) -> bool {
+    pub fn is_finished(&self) -> bool {
         match self {
             Self::Active {
                 connection_join_handle,
@@ -64,12 +65,12 @@ impl SnapdConnection {
 
     /// Determines whether the connection has ended for some reason
     /// (e.g. an error or `snapd` closed it).
-    fn connection_ended(&self) -> bool {
+    pub fn connection_ended(&self) -> bool {
         self.is_closed() || self.is_finished()
     }
 
     /// Closes the sender and joins the connection coroutine, checking for errors.
-    async fn close(self) -> Result<(), ConnectionReuseError> {
+    pub async fn close(self) -> Result<(), ConnectionReuseError> {
         let (sender, join_handle) = match self {
             Self::Closed => return Ok(()),
             Self::Active {
