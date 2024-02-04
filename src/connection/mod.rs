@@ -1,27 +1,22 @@
 use std::mem;
 
-use deadpool::managed::{Metrics, RecycleError, RecycleResult};
+use deadpool::managed::{Metrics, RecycleResult};
 use deadpool::{async_trait, managed::Manager};
 use hyper::client::conn::http1::{self as conn, SendRequest};
-use thiserror::Error;
 use tokio::net::UnixStream;
-use tokio::task::{JoinError, JoinHandle};
+use tokio::task::JoinHandle;
 
 mod body;
+mod error;
 mod io;
 
 use body::SnapdRequestBody;
 use io::UnixSocketIo;
 
-const SNAPD_SOCKET_PATH: &str = "/run/snapd.socket";
+#[doc(inline)]
+pub use error::{ConnectionReuseError, SnapdConnectionError};
 
-#[derive(Error, Debug)]
-pub enum SnapdConnectionError {
-    #[error("there was a problem during the initial connection handshake: {0}")]
-    HandshakeError(#[from] hyper::Error),
-    #[error("there was an error reusing a previous connection: {0}")]
-    ConnectionReuseError(#[from] ConnectionReuseError),
-}
+const SNAPD_SOCKET_PATH: &str = "/run/snapd.socket";
 
 pub(crate) enum SnapdConnection {
     Active {
@@ -98,16 +93,6 @@ impl SnapdConnection {
     }
 }
 
-#[derive(Debug, Error)]
-pub enum ConnectionReuseError {
-    #[error("the connection coroutine to the snapd socket panicked: {0}")]
-    ConnectionPanicked(#[from] JoinError),
-    #[error("the connection coroutine to the snapd socket encountered an error: {0}")]
-    RuntimeError(#[from] hyper::Error),
-    #[error("the connection was closed, but not removed from the pool")]
-    NaturallyClosed,
-}
-
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord, Default)]
 pub(crate) struct SnapdConnectionManager {}
 
@@ -141,11 +126,5 @@ impl Manager for SnapdConnectionManager {
                 }
             }
         }
-    }
-}
-
-impl From<ConnectionReuseError> for RecycleError<SnapdConnectionError> {
-    fn from(err: ConnectionReuseError) -> Self {
-        RecycleError::Backend(SnapdConnectionError::from(err))
     }
 }
