@@ -34,98 +34,16 @@
 use core::fmt;
 use std::{borrow::Cow, fmt::Display};
 
-use paste::paste;
 use serde::de;
 use serde::{de::Visitor, Deserialize, Serialize};
 use thiserror::Error;
+
+use super::snap_str_newtype;
 
 pub trait ToOwnedInner {
     type Other<'b>;
 
     fn to_owned_inner<'b>(self) -> Self::Other<'b>;
-}
-
-macro_rules! snap_str_newtype {
-    ($(#[$attr:meta])*$typename:ident) => {
-        $(#[$attr])*
-        #[derive(
-            Clone, serde::Serialize, Debug, Hash, PartialEq, Eq, Default,
-        )]
-        pub struct $typename<'a>(std::borrow::Cow<'a, str>);
-
-        impl<'a> AsRef<str> for $typename<'a> {
-            fn as_ref(&self) -> &str {
-                self.0.as_ref()
-            }
-        }
-
-        impl<'a> std::borrow::Borrow<str> for $typename<'a> {
-            fn borrow(&self) -> &str {
-                self.0.borrow()
-            }
-        }
-
-        impl<'a> From<&'a str> for $typename<'a> {
-            fn from(val: &'a str) -> Self {
-                Self(val.into())
-            }
-        }
-
-        impl<'a> From<String> for $typename<'a> {
-            fn from(val: String) -> Self {
-                Self(val.into())
-            }
-        }
-
-        impl<'a> std::fmt::Display for $typename<'a> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", self.as_ref())
-            }
-        }
-
-        impl<'a> ToOwnedInner for $typename<'a> {
-            type Other<'b> = $typename<'b>;
-
-            fn to_owned_inner<'b>(self) -> Self::Other<'b> {
-                $typename(self.0.into_owned().into())
-            }
-        }
-
-        paste! {
-            struct [<$typename Visitor>];
-
-
-            impl<'de> Visitor<'de> for [<$typename Visitor>] {
-                type Value = $typename<'de>;
-
-                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    formatter.write_str("a plain string")
-                }
-
-                fn visit_borrowed_str<E: de::Error>(self, v: &'de str) -> Result<Self::Value, E> {
-                    Ok(v.into())
-                }
-            }
-
-            impl<'de, 'a> Deserialize<'de> for $typename<'a>
-            where
-                'de: 'a,
-            {
-                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-                where
-                    D: serde::Deserializer<'de>,
-                {
-                    deserializer.deserialize_str([<$typename Visitor>])
-                }
-            }
-        }
-
-
-    };
-
-    ($($(#[$attr:meta])*$typename:ident),+) => {
-        $(snap_str_newtype!{$(#[$attr])*$typename})*
-    };
 }
 
 snap_str_newtype! {
@@ -256,10 +174,7 @@ impl<'de> Visitor<'de> for SnapCommandVisitor {
     }
 }
 
-impl<'de, 'a> Deserialize<'de> for SnapCommand<'a, 'a>
-where
-    'de: 'a,
-{
+impl<'de> Deserialize<'de> for SnapCommand<'de, 'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
