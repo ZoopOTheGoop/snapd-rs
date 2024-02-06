@@ -1,4 +1,4 @@
-use std::mem;
+use std::{future, mem};
 
 use deadpool::managed::{Metrics, RecycleResult};
 use deadpool::{async_trait, managed::Manager};
@@ -103,6 +103,7 @@ impl SnapdConnection {
     ) -> Result<Collected<Bytes>, SnapdRequestError> {
         match self {
             Self::Active { request_sender, .. } => {
+                future::poll_fn(|cx| request_sender.poll_ready(cx)).await?;
                 let response = request_sender.send_request(req).await?;
                 Ok(response.into_body().collect().await?)
             }
