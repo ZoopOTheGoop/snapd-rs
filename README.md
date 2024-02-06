@@ -12,6 +12,10 @@ This repository contains Rust packages for handling the REST API for `snapd`. Th
 
 For general details, including installation, getting started and setting up a development environment, head over to our section on [Contributing to the code](CONTRIBUTING.md#contributing-to-the-code).
 
+## Setup
+
+To test this, you'll need Rust installed (use [https://rustup.rs]), as well as a local, current of `snapd`. All tests can be run via `cargo test`.
+
 ## Get involved
 
 This is an [open source](LICENSE) project and we warmly welcome community contributions, suggestions, and constructive feedback. If you're interested in contributing, please take a look at our [Contribution guidelines](CONTRIBUTING.md) first.
