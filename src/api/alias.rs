@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use url::Url;
 
-use super::{snap_str_newtype, App, SnapCommand, SnapName};
+use crate::SnapdClient;
+
+use super::{snap_str_newtype, App, Get, JsonPayload, SnapCommand, SnapName};
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case", tag = "action")]
@@ -31,6 +34,18 @@ pub enum AliasCommand<'a> {
         #[serde(borrow, skip_serializing_if = "Option::is_none")]
         app: Option<App<'a>>,
     },
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Hash, Eq, PartialEq, PartialOrd, Ord)]
+pub struct GetAliases;
+
+impl Get for GetAliases {
+    type Payload<'p> = JsonPayload<'p, Aliases<'p>>;
+    type Client = SnapdClient;
+
+    fn url(&self, base_url: Url) -> Url {
+        base_url.join("/v2/aliases").unwrap()
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]

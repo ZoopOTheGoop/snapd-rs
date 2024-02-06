@@ -2,11 +2,13 @@ use std::mem;
 
 use deadpool::managed::{Metrics, RecycleResult};
 use deadpool::{async_trait, managed::Manager};
+use http_body_util::{BodyExt, Collected};
+use hyper::body::Bytes;
 use hyper::client::conn::http1::{self as conn, SendRequest};
 use tokio::net::UnixStream;
 use tokio::task::JoinHandle;
 
-mod body;
+pub(crate) mod body;
 mod error;
 mod io;
 
@@ -15,6 +17,8 @@ use io::UnixSocketIo;
 
 #[doc(inline)]
 pub use error::{ConnectionReuseError, SnapdConnectionError};
+
+use self::error::SnapdRequestError;
 
 pub(crate) enum SnapdConnection {
     Active {
@@ -92,10 +96,23 @@ impl SnapdConnection {
 
         Ok(join_handle.await??)
     }
+
+    pub(crate) async fn request_response(
+        &mut self,
+        req: hyper::Request<SnapdRequestBody>,
+    ) -> Result<Collected<Bytes>, SnapdRequestError> {
+        match self {
+            Self::Active { request_sender, .. } => {
+                let response = request_sender.send_request(req).await?;
+                Ok(response.into_body().collect().await?)
+            }
+            Self::Closed => Err(SnapdRequestError::ClosedConnectionError),
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord, Default)]
-pub(crate) struct SnapdConnectionManager {}
+pub(crate) struct SnapdConnectionManager;
 
 #[async_trait]
 impl Manager for SnapdConnectionManager {
