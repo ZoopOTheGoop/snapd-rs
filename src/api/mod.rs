@@ -1,7 +1,7 @@
 pub mod alias;
 mod assertions;
 pub mod convenience;
-pub(crate) mod snap;
+pub(crate) mod core;
 
 use std::marker::PhantomData;
 
@@ -17,7 +17,7 @@ const JSON_CONTENT: &str = "application/json";
 use crate::{connection::body::SnapdRequestBody, GetClient, SnapdClientError};
 
 #[doc(inline)]
-pub use snap::*;
+pub use core::*;
 
 pub trait Payload<'de>: From<Collected<Bytes>>
 where
@@ -169,7 +169,7 @@ macro_rules! snap_str_newtype {
             }
         }
 
-        impl<'a> $crate::api::snap::ToOwnedInner for $typename<'a> {
+        impl<'a> $crate::api::core::ToOwnedInner for $typename<'a> {
             type Other<'b> = $typename<'b>;
 
             fn to_owned_inner<'b>(self) -> Self::Other<'b> {
