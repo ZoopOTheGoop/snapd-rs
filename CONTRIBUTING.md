@@ -78,4 +78,4 @@ This project is covered by [THIS LICENSE](LICENSE).
 
 ## Getting Help
 
-Join us in the [Ubuntu Community](https://discourse.ubuntu.com/c/desktop/8) and post your question there with a descriptive tag.
+Join us in the [Snapcraft Community](https://forum.snapcraft.io/) and post your question there with a descriptive tag.
