@@ -1,4 +1,6 @@
 pub mod alias;
+mod assertions;
+pub mod convenience;
 pub(crate) mod snap;
 
 use std::marker::PhantomData;
