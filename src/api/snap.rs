@@ -93,8 +93,10 @@ impl<'a, 'b> SnapCommand<'a, 'b> {
     pub fn from_convertible<N: Into<SnapName<'a>>, C: Into<App<'b>>>(name: N, command: C) -> Self {
         Self::from_parts(name.into(), command.into())
     }
+}
 
-    pub fn from_raw<'c: 'a + 'b>(raw_command: &'c str) -> Self {
+impl<'a> SnapCommand<'a, 'a> {
+    pub fn from_raw(raw_command: &'a str) -> Self {
         raw_command
             .split_once('.')
             .map(|(name, command)| Self {
@@ -112,12 +114,13 @@ impl<'a, 'b> SnapCommand<'a, 'b> {
         // it took me forever to debug this, but `Self` implies the same lifetimes, which leads to an
         // infinite loop where `Self::from_raw` followed by converting the values into strings forces
         // the compiler to assume that the borrow of `raw_command` from `from_raw`
-        // somehow outlives the `'static` lifetime of `String`.
+        // somehow outlives the lifetime of `String`.
         //
         // Also, there's really no good way to do this without two clones, at least not with severely
         // overcomplicating this struct. We could *technically* have an underlying `raw` that's `Pin`ned
         // and `Box`ed, as well as an `Option`` in case we use `from_parts` to construct this. And then like
-        // put `raw_command` on the heap in a pinned location and thus avoid two allocations.
+        // put `raw_command` on the heap in a pinned location and thus avoid two allocations. Or worse options
+        // with `unsafe`.
         //
         // But like... why bother?
         SnapCommand::from_raw(&raw_command).to_owned_inner()
