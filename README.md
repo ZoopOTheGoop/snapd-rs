@@ -16,6 +16,14 @@ For general details, including installation, getting started and setting up a de
 
 To test this, you'll need Rust installed (use [https://rustup.rs]), as well as a local, current of `snapd`. All tests can be run via `cargo test`.
 
+## Implementation guidelines
+
+- For endpoints with multiple static values with their own request/response formats (the best example is `assertions`), implement each as its own separate request/response pair, instead of a giant one for each. It makes more sense to abstract away the endpoint that way.
+- For responses that return unknown values, using a `HashMap` keyed with the corresponding `Cow` or newtype is fine.
+- Try to, where possible, implement all fields as a custom `struct`, and avoid allocations when Deserializing. Similarly, Requests should not be required to own their values.
+- It is okay to implement "fake" requests for convenience's sake, that don't match `snapd`'s actual endpoints, but all of `snapd`'s endpoints should be findeable.
+- Where possible, valid requests and responses should be statically guaranteed (e.g. authorized endpoints should require an authorized client).
+
 ## Get involved
 
 This is an [open source](LICENSE) project and we warmly welcome community contributions, suggestions, and constructive feedback. If you're interested in contributing, please take a look at our [Contribution guidelines](CONTRIBUTING.md) first.
