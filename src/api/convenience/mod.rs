@@ -44,9 +44,9 @@ pub struct SnapNameFromId<'a> {
 }
 
 impl<'a> SnapNameFromId<'a> {
-    pub async fn get_id<'b, 'c>(name: SnapId<'b>, client: &SnapdClient) -> SnapName<'c> {
+    pub async fn get_name<'b, 'c>(id: SnapId<'b>, client: &SnapdClient) -> SnapName<'c> {
         client
-            .get(&SnapNameFromId { name })
+            .get(&SnapNameFromId { name: id })
             .await
             .unwrap()
             .parse()
@@ -87,7 +87,7 @@ mod test {
     async fn name_from_id() {
         let client = SnapdClient::default();
 
-        let id = SnapNameFromId::get_id("NeoQngJVBf2wKC48bxnF2xqmfEFGdVnx".into(), &client).await;
+        let id = SnapNameFromId::get_name("NeoQngJVBf2wKC48bxnF2xqmfEFGdVnx".into(), &client).await;
         assert_eq!("steam", id.as_ref())
     }
 }
