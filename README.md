@@ -1,4 +1,4 @@
-# Welcome to Ratings
+# Snapd-rs
 
 [actions-image]: https://github.com/canonical/snapd-rs/actions/workflows/push.yaml/badge.svg
 [actions-url]: https://github.com/canonical/snapd-rs/actions/workflows/push.yaml
