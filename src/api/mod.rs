@@ -2,6 +2,7 @@ pub mod alias;
 mod assertions;
 pub mod convenience;
 pub(crate) mod core;
+pub mod find;
 
 use std::marker::PhantomData;
 
