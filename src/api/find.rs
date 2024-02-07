@@ -77,9 +77,9 @@ pub struct StoreCategory<'a> {
 }
 
 impl<'a> ToOwnedInner for StoreCategory<'a> {
-    type Other<'b> = StoreCategory<'b>;
+    type Other = StoreCategory<'static>;
 
-    fn to_owned_inner<'b>(self) -> Self::Other<'b> {
+    fn to_owned_inner<'b>(self) -> Self::Other {
         StoreCategory {
             name: self.name.to_owned_inner(),
             featured: self.featured,

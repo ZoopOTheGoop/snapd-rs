@@ -11,7 +11,7 @@ pub struct SnapIdFromName<'a> {
 }
 
 impl<'a> SnapIdFromName<'a> {
-    pub async fn get_id<'b, 'c>(name: SnapName<'b>, client: &SnapdClient) -> SnapId<'c> {
+    pub async fn get_id(name: SnapName<'_>, client: &SnapdClient) -> SnapId<'static> {
         client
             .get(&SnapIdFromName { name })
             .await
@@ -44,7 +44,7 @@ pub struct SnapNameFromId<'a> {
 }
 
 impl<'a> SnapNameFromId<'a> {
-    pub async fn get_name<'b, 'c>(id: SnapId<'b>, client: &SnapdClient) -> SnapName<'c> {
+    pub async fn get_name(id: SnapId<'_>, client: &SnapdClient) -> SnapName<'static> {
         client
             .get(&SnapNameFromId { name: id })
             .await

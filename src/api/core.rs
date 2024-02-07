@@ -31,16 +31,28 @@
 //! assert_eq!("foo", name.as_ref());
 //! ```
 
-use std::fmt::Display;
+use std::{borrow::Cow, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
 use super::snap_str_newtype;
 
 pub trait ToOwnedInner {
-    type Other<'b>;
+    type Other;
 
-    fn to_owned_inner<'b>(self) -> Self::Other<'b>;
+    fn to_owned_inner(self) -> Self::Other;
+}
+
+impl<'a, T> ToOwnedInner for Cow<'a, T>
+where
+    T: ?Sized + 'a + ToOwned + 'static,
+    <T as ToOwned>::Owned: Clone + 'static,
+{
+    type Other = Cow<'static, T>;
+
+    fn to_owned_inner(self) -> Self::Other {
+        Cow::Owned(self.into_owned())
+    }
 }
 
 snap_str_newtype! {
@@ -134,9 +146,9 @@ impl<'a> From<&'a str> for SnapCommand<'a, 'a> {
 }
 
 impl<'a, 'b> ToOwnedInner for SnapCommand<'a, 'b> {
-    type Other<'c> = SnapCommand<'c, 'c>;
+    type Other = SnapCommand<'static, 'static>;
 
-    fn to_owned_inner<'c>(self) -> Self::Other<'c> {
+    fn to_owned_inner(self) -> Self::Other {
         SnapCommand {
             name: self.name.to_owned_inner(),
             command: self.command.map(|v| v.to_owned_inner()),

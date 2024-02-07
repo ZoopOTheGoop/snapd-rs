@@ -171,10 +171,10 @@ macro_rules! snap_str_newtype {
         }
 
         impl<'a> $crate::api::core::ToOwnedInner for $typename<'a> {
-            type Other<'b> = $typename<'b>;
+            type Other = $typename<'static>;
 
-            fn to_owned_inner<'b>(self) -> Self::Other<'b> {
-                $typename(self.0.into_owned().into())
+            fn to_owned_inner(self) -> Self::Other {
+                $typename(self.0.to_owned_inner())
             }
         }
 
