@@ -40,6 +40,7 @@ pub trait GetClient {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct SnapdClient {
     pool: Pool<SnapdConnectionManager>,
 }

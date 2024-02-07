@@ -20,6 +20,7 @@ pub use error::{ConnectionReuseError, SnapdConnectionError};
 
 use self::error::SnapdRequestError;
 
+#[derive(Debug)]
 pub(crate) enum SnapdConnection {
     Active {
         request_sender: SendRequest<SnapdRequestBody>,
