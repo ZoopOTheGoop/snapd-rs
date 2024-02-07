@@ -7,12 +7,15 @@ use super::{snap_str_newtype, Get, JsonPayload, SnapId, SnapName, ToOwnedInner};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct FindSnapByName<'a> {
-    name: SnapName<'a>,
+    pub name: SnapName<'a>,
 }
 
 impl<'a> FindSnapByName<'a> {
-    pub async fn get_categories<'c>(&self, client: &SnapdClient) -> Vec<StoreCategory<'c>> {
-        let payload = self.get(client).await.unwrap();
+    pub async fn get_categories<'b, 'c>(
+        name: SnapName<'b>,
+        client: &SnapdClient,
+    ) -> Vec<StoreCategory<'c>> {
+        let payload = FindSnapByName { name }.get(client).await.unwrap();
         let mut snaps = payload.parse().unwrap();
         debug_assert_eq!(snaps.info.len(), 1);
 
@@ -42,34 +45,35 @@ impl<'a> Get for FindSnapByName<'a> {
 }
 
 #[derive(Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]
+#[serde(transparent)]
 pub struct FindResult<'a> {
-    #[serde(flatten, borrow)]
-    info: Vec<SnapInfo<'a>>,
+    #[serde(borrow)]
+    pub info: Vec<SnapInfo<'a>>,
 }
 
 #[derive(Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]
 pub struct SnapInfo<'a> {
     #[serde(borrow)]
-    id: SnapId<'a>,
+    pub id: SnapId<'a>,
     #[serde(borrow)]
-    title: SnapTitle<'a>,
+    pub title: SnapTitle<'a>,
     #[serde(borrow)]
-    summary: Summary<'a>,
+    pub summary: Summary<'a>,
     #[serde(borrow)]
-    description: Description<'a>,
+    pub description: Description<'a>,
     #[serde(borrow)]
-    name: SnapName<'a>,
+    pub name: SnapName<'a>,
     #[serde(borrow)]
-    developer: Developer<'a>,
+    pub developer: Developer<'a>,
     #[serde(borrow)]
-    categories: Vec<StoreCategory<'a>>,
+    pub categories: Vec<StoreCategory<'a>>,
 }
 
 #[derive(Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]
 pub struct StoreCategory<'a> {
     #[serde(borrow)]
-    name: CategoryName<'a>,
-    features: bool,
+    pub name: CategoryName<'a>,
+    pub featured: bool,
 }
 
 impl<'a> ToOwnedInner for StoreCategory<'a> {
@@ -78,7 +82,7 @@ impl<'a> ToOwnedInner for StoreCategory<'a> {
     fn to_owned_inner<'b>(self) -> Self::Other<'b> {
         StoreCategory {
             name: self.name.to_owned_inner(),
-            features: self.features,
+            featured: self.featured,
         }
     }
 }
@@ -89,4 +93,28 @@ snap_str_newtype! {
     Description,
     Developer,
     CategoryName
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashSet;
+
+    use super::FindSnapByName;
+    use crate::SnapdClient;
+
+    #[tokio::test]
+    async fn categories() {
+        let categories =
+            FindSnapByName::get_categories("colorgrab".into(), &SnapdClient::default()).await;
+
+        let set: HashSet<_> = categories
+            .iter()
+            .map(|category| category.name.0.as_ref())
+            .collect();
+
+        let expected: HashSet<_> =
+            HashSet::from_iter(vec!["art-and-design", "utilities"].into_iter());
+
+        assert_eq!(set, expected)
+    }
 }
