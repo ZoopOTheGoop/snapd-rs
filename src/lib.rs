@@ -11,12 +11,14 @@ use url::Url;
 pub mod api;
 mod connection;
 
-use api::Get;
+use api::{find::FindError, Get};
 
 #[derive(Debug, Error)]
 pub enum SnapdClientError {
     #[error("an error happened with a snapd endpoint {0}")]
-    ApiEndpointError(#[from] Box<dyn error::Error>),
+    GenericApiEndpointError(#[from] Box<dyn error::Error>),
+    #[error("an error happend when attempting to retrieve a snap via /find {0}")]
+    FindEndpointError(#[from] FindError),
 }
 
 #[async_trait]

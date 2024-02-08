@@ -1,9 +1,16 @@
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use url::Url;
 
 use crate::{SnapdClient, SnapdClientError};
 
 use super::{snap_str_newtype, Get, JsonPayload, SnapId, SnapName, ToOwnedInner};
+
+#[derive(Clone, Debug, Error)]
+pub enum FindError {
+    #[error("didn't find a snap with the given id")]
+    NoSnapsFound,
+}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct FindSnapByName<'a> {
@@ -17,6 +24,9 @@ impl<'a> FindSnapByName<'a> {
     ) -> Result<Vec<StoreCategory<'c>>, SnapdClientError> {
         let payload = FindSnapByName { name }.get(client).await?;
         let mut snaps = payload.parse().unwrap();
+        if snaps.info.is_empty() {
+            return Err(FindError::NoSnapsFound)?;
+        }
         debug_assert_eq!(
             snaps.info.len(),
             1,
@@ -60,6 +70,9 @@ impl<'a> FindSnapById<'a> {
     ) -> Result<Vec<StoreCategory<'c>>, SnapdClientError> {
         let payload = FindSnapById { id }.get(client).await?;
         let mut snaps = payload.parse().expect("snapd returned invalid json?");
+        if snaps.info.is_empty() {
+            return Err(FindError::NoSnapsFound)?;
+        }
         debug_assert_eq!(
             snaps.info.len(),
             1,
