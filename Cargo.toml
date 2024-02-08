@@ -2,3 +2,29 @@
 name = "snapd"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
+async-trait = "0.1.77"
+deadpool = { version = "0.10.0", features = [
+    "managed",
+    "async-trait",
+    "rt_tokio_1",
+], default-features = false }
+http = "1.0.0"
+http-body-util = "0.1.0"
+hyper = { version = "1.1.0", default-features = false, features = [
+    "client",
+    "http1",
+] }
+pin-project = "1.1.4"
+serde = { version = "1.0.196", features = ["derive"] }
+serde_json = "1.0.113"
+thiserror = "1.0.56"
+tokio = { version = "1.35.1", default-features = false, features = [
+    "net",
+    "io-util",
+] }
+url = "2.5.0"
+
+[dev-dependencies]
+tokio = { version = "1.35.1", default-features = false, features = ["full"] }
