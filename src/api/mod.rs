@@ -67,7 +67,6 @@ where
     R: Deserialize<'de>,
 {
     pub fn parse(&'de self) -> Result<R, serde_json::Error> {
-        println!("{}", String::from_utf8(self.data.to_vec()).unwrap());
         let parsed: SnapdResponse<R> = serde_json::from_slice(&self.data)?;
         Ok(parsed.result)
     }

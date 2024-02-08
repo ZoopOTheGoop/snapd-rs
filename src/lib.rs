@@ -36,7 +36,6 @@ pub trait GetClient {
                 .url(Url::parse("http://localhost/").unwrap())
                 .as_str(),
         );
-        println!("{}", builder.uri_ref().unwrap());
         let builder = request.attach_header(self.attach_header(builder));
 
         builder.body(request.to_body()).expect(
