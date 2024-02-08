@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::SnapdClient;
+use crate::{SnapdClient, SnapdClientError};
 
 use super::{snap_str_newtype, Get, JsonPayload, SnapId, SnapName, ToOwnedInner};
 
@@ -14,10 +14,14 @@ impl<'a> FindSnapByName<'a> {
     pub async fn get_categories<'b, 'c>(
         name: SnapName<'b>,
         client: &SnapdClient,
-    ) -> Vec<StoreCategory<'c>> {
-        let payload = FindSnapByName { name }.get(client).await.unwrap();
+    ) -> Result<Vec<StoreCategory<'c>>, SnapdClientError> {
+        let payload = FindSnapByName { name }.get(client).await?;
         let mut snaps = payload.parse().unwrap();
-        debug_assert_eq!(snaps.info.len(), 1);
+        debug_assert_eq!(
+            snaps.info.len(),
+            1,
+            "filtering by name somehow returned more than one snap?"
+        );
 
         let categories: Vec<_> = snaps
             .info
@@ -28,7 +32,7 @@ impl<'a> FindSnapByName<'a> {
             .map(|v| v.to_owned_inner())
             .collect();
 
-        categories
+        Ok(categories)
     }
 }
 
@@ -40,6 +44,49 @@ impl<'a> Get for FindSnapByName<'a> {
     fn url(&self, base_url: Url) -> Url {
         base_url
             .join(&format!("/v2/find?name={}", self.name))
+            .expect("error formatting snap find URL, internal error")
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct FindSnapById<'a> {
+    pub id: SnapId<'a>,
+}
+
+impl<'a> FindSnapById<'a> {
+    pub async fn get_categories<'b, 'c>(
+        id: SnapId<'b>,
+        client: &SnapdClient,
+    ) -> Result<Vec<StoreCategory<'c>>, SnapdClientError> {
+        let payload = FindSnapById { id }.get(client).await?;
+        let mut snaps = payload.parse().expect("snapd returned invalid json?");
+        debug_assert_eq!(
+            snaps.info.len(),
+            1,
+            "filtering by ID somehow returned more than one snap?"
+        );
+
+        let categories: Vec<_> = snaps
+            .info
+            .pop()
+            .unwrap()
+            .categories
+            .into_iter()
+            .map(|v| v.to_owned_inner())
+            .collect();
+
+        Ok(categories)
+    }
+}
+
+impl<'a> Get for FindSnapById<'a> {
+    type Payload<'de> = JsonPayload<'de, FindResult<'de>>;
+
+    type Client = SnapdClient;
+
+    fn url(&self, base_url: Url) -> Url {
+        base_url
+            .join(&format!("/v2/find?common-id={}", self.id))
             .expect("error formatting snap find URL, internal error")
     }
 }
@@ -105,7 +152,9 @@ mod test {
     #[tokio::test]
     async fn categories() {
         let categories =
-            FindSnapByName::get_categories("colorgrab".into(), &SnapdClient::default()).await;
+            FindSnapByName::get_categories("colorgrab".into(), &SnapdClient::default())
+                .await
+                .unwrap();
 
         let set: HashSet<_> = categories
             .iter()

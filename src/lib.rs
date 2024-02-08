@@ -1,3 +1,5 @@
+use std::error;
+
 use async_trait::async_trait;
 use connection::{body::SnapdRequestBody, SnapdConnectionManager};
 use deadpool::managed::Pool;
@@ -12,8 +14,10 @@ mod connection;
 use api::Get;
 
 #[derive(Debug, Error)]
-#[error("A snapd client error happened")]
-pub struct SnapdClientError;
+pub enum SnapdClientError {
+    #[error("an error happened with a snapd endpoint {0}")]
+    ApiEndpointError(#[from] Box<dyn error::Error>),
+}
 
 #[async_trait]
 pub trait GetClient {
