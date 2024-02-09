@@ -6,39 +6,6 @@ use super::assertions::DeclarationAssertionPayload;
 use super::{Get, SnapId, SnapName, ToOwnedInner};
 
 #[derive(Clone, Default, Hash, Eq, PartialEq, Debug)]
-pub struct SnapIdFromName<'a> {
-    pub name: SnapName<'a>,
-}
-
-impl<'a> SnapIdFromName<'a> {
-    pub async fn get_id(name: SnapName<'_>, client: &SnapdClient) -> SnapId<'static> {
-        client
-            .get(&SnapIdFromName { name })
-            .await
-            .unwrap()
-            .parse()
-            .unwrap()
-            .snap_id
-            .to_owned_inner()
-    }
-}
-
-impl<'a> Get for SnapIdFromName<'a> {
-    type Payload<'de> = DeclarationAssertionPayload<'de>;
-
-    type Client = SnapdClient;
-
-    fn url(&self, base_url: Url) -> Url {
-        base_url
-            .join(&format!(
-                "/v2/assertions/snap-declaration?snap-name={}",
-                self.name
-            ))
-            .unwrap()
-    }
-}
-
-#[derive(Clone, Default, Hash, Eq, PartialEq, Debug)]
 pub struct SnapNameFromId<'a> {
     pub name: SnapId<'a>,
 }
@@ -64,7 +31,9 @@ impl<'a> Get for SnapNameFromId<'a> {
     fn url(&self, base_url: Url) -> Url {
         base_url
             .join(&format!(
-                "/v2/assertions/snap-declaration?snap-id={}",
+                // TODO: understand implications of `series=16` but it seems to work for
+                // a wide variety of snaps I've tested ATM
+                "/v2/assertions/snap-declaration?series=16&remote=true&snap-id={}",
                 self.name
             ))
             .unwrap()
@@ -74,14 +43,6 @@ impl<'a> Get for SnapNameFromId<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[tokio::test]
-    async fn id_from_name() {
-        let client = SnapdClient::default();
-
-        let id = SnapIdFromName::get_id("steam".into(), &client).await;
-        assert_eq!("NeoQngJVBf2wKC48bxnF2xqmfEFGdVnx", id.as_ref())
-    }
 
     #[tokio::test]
     async fn name_from_id() {
