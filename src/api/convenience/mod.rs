@@ -1,9 +1,11 @@
 use url::Url;
 
-use crate::{GetClient, SnapdClient};
+use crate::{GetClient, SnapdClient, SnapdClientError};
 
 use super::assertions::DeclarationAssertionPayload;
 use super::{Get, SnapId, SnapName, ToOwnedInner};
+
+pub use crate::api::assertions::SnapDeclarationError;
 
 #[derive(Clone, Default, Hash, Eq, PartialEq, Debug)]
 pub struct SnapNameFromId<'a> {
@@ -11,15 +13,18 @@ pub struct SnapNameFromId<'a> {
 }
 
 impl<'a> SnapNameFromId<'a> {
-    pub async fn get_name(id: SnapId<'_>, client: &SnapdClient) -> SnapName<'static> {
-        client
-            .get(&SnapNameFromId { name: id })
-            .await
-            .unwrap()
-            .parse()
-            .unwrap()
-            .snap_name
-            .to_owned_inner()
+    pub async fn get_name(
+        id: SnapId<'_>,
+        client: &SnapdClient,
+    ) -> Result<SnapName<'static>, SnapdClientError> {
+        let response = client.get(&SnapNameFromId { name: id }).await?;
+        let declaration = response.parse().unwrap();
+
+        if declaration.snap_name.as_ref() == "" {
+            return Err(SnapDeclarationError::NoSnapsFound)?;
+        };
+
+        Ok(declaration.snap_name.to_owned_inner())
     }
 }
 
@@ -48,7 +53,9 @@ mod test {
     async fn name_from_id() {
         let client = SnapdClient::default();
 
-        let id = SnapNameFromId::get_name("NeoQngJVBf2wKC48bxnF2xqmfEFGdVnx".into(), &client).await;
+        let id = SnapNameFromId::get_name("NeoQngJVBf2wKC48bxnF2xqmfEFGdVnx".into(), &client)
+            .await
+            .unwrap();
         assert_eq!("steam", id.as_ref())
     }
 }

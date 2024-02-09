@@ -11,7 +11,7 @@ use url::Url;
 pub mod api;
 mod connection;
 
-use api::{find::FindError, Get};
+use api::{convenience::SnapDeclarationError, find::FindError, Get};
 
 #[derive(Debug, Error)]
 pub enum SnapdClientError {
@@ -19,6 +19,10 @@ pub enum SnapdClientError {
     GenericApiEndpointError(#[from] Box<dyn error::Error>),
     #[error("an error happend when attempting to retrieve a snap via /find {0}")]
     FindEndpointError(#[from] FindError),
+    #[error(
+        "an error happened when attempting to retrieve info via /assertions/snap-declaration {0}"
+    )]
+    SnapDeclaratioNError(#[from] SnapDeclarationError),
 }
 
 #[async_trait]

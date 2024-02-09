@@ -3,8 +3,15 @@ use std::{convert::Infallible, io::BufRead, marker::PhantomData};
 use http_body_util::Collected;
 use hyper::body::Bytes;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use super::{Payload, SnapId, SnapName, ToOwnedInner};
+
+#[derive(Clone, Debug, Error)]
+pub enum SnapDeclarationError {
+    #[error("didn't find a snap with the given id")]
+    NoSnapsFound,
+}
 
 #[derive(Clone, Default, Hash, Eq, PartialEq, Serialize, Deserialize, Debug)]
 pub struct SnapDeclaration<'a> {
