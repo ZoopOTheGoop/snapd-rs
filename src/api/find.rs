@@ -58,52 +58,6 @@ impl<'a> Get for FindSnapByName<'a> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct FindSnapById<'a> {
-    pub id: SnapId<'a>,
-}
-
-impl<'a> FindSnapById<'a> {
-    pub async fn get_categories<'b, 'c>(
-        id: SnapId<'b>,
-        client: &SnapdClient,
-    ) -> Result<Vec<StoreCategory<'c>>, SnapdClientError> {
-        let payload = FindSnapById { id }.get(client).await?;
-        let mut snaps = payload.parse().expect("snapd returned invalid json?");
-        if snaps.info.is_empty() {
-            return Err(FindError::NoSnapsFound)?;
-        }
-        debug_assert_eq!(
-            snaps.info.len(),
-            1,
-            "filtering by ID somehow returned more than one snap?"
-        );
-
-        let categories: Vec<_> = snaps
-            .info
-            .pop()
-            .unwrap()
-            .categories
-            .into_iter()
-            .map(|v| v.to_owned_inner())
-            .collect();
-
-        Ok(categories)
-    }
-}
-
-impl<'a> Get for FindSnapById<'a> {
-    type Payload<'de> = JsonPayload<'de, FindResult<'de>>;
-
-    type Client = SnapdClient;
-
-    fn url(&self, base_url: Url) -> Url {
-        base_url
-            .join(&format!("/v2/find?common-id={}", self.id))
-            .expect("error formatting snap find URL, internal error")
-    }
-}
-
 #[derive(Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]
 #[serde(transparent)]
 pub struct FindResult<'a> {
@@ -159,7 +113,7 @@ snap_str_newtype! {
 mod test {
     use std::collections::HashSet;
 
-    use super::{FindSnapById, FindSnapByName};
+    use super::FindSnapByName;
     use crate::SnapdClient;
 
     #[tokio::test]
@@ -168,26 +122,6 @@ mod test {
             FindSnapByName::get_categories("colorgrab".into(), &SnapdClient::default())
                 .await
                 .unwrap();
-
-        let set: HashSet<_> = categories
-            .iter()
-            .map(|category| category.name.0.as_ref())
-            .collect();
-
-        let expected: HashSet<_> =
-            HashSet::from_iter(vec!["art-and-design", "utilities"].into_iter());
-
-        assert_eq!(set, expected)
-    }
-
-    #[tokio::test]
-    async fn categories_from_id() {
-        let categories = FindSnapById::get_categories(
-            "3Iwi803Tk3KQwyD6jFiAJdlq8MLgBIoD".into(),
-            &SnapdClient::default(),
-        )
-        .await
-        .unwrap();
 
         let set: HashSet<_> = categories
             .iter()
