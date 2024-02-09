@@ -159,15 +159,35 @@ snap_str_newtype! {
 mod test {
     use std::collections::HashSet;
 
-    use super::FindSnapByName;
+    use super::{FindSnapById, FindSnapByName};
     use crate::SnapdClient;
 
     #[tokio::test]
-    async fn categories() {
+    async fn categories_from_name() {
         let categories =
             FindSnapByName::get_categories("colorgrab".into(), &SnapdClient::default())
                 .await
                 .unwrap();
+
+        let set: HashSet<_> = categories
+            .iter()
+            .map(|category| category.name.0.as_ref())
+            .collect();
+
+        let expected: HashSet<_> =
+            HashSet::from_iter(vec!["art-and-design", "utilities"].into_iter());
+
+        assert_eq!(set, expected)
+    }
+
+    #[tokio::test]
+    async fn categories_from_id() {
+        let categories = FindSnapById::get_categories(
+            "3Iwi803Tk3KQwyD6jFiAJdlq8MLgBIoD".into(),
+            &SnapdClient::default(),
+        )
+        .await
+        .unwrap();
 
         let set: HashSet<_> = categories
             .iter()
